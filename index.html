@@ -100,7 +100,7 @@ input,select,textarea{font-family:'Nunito',sans-serif}
 /* LANÇAMENTO */
 .lanc{background:var(--card);border-radius:14px;padding:12px 13px;margin-bottom:8px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow)}
 .lanc-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
-.ico-e{background:#e8f5e9}.ico-s{background:#fdecea}.ico-prev{background:#fff3e0}
+.ico-e{background:#e8f5e9}.ico-s{background:#fdecea}.ico-prev{background:#fff3e0}.ico-transf{background:#e8f0fe}
 .lanc-body{flex:1;min-width:0}
 .lanc-desc{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lanc-meta{display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap}
@@ -112,7 +112,7 @@ input,select,textarea{font-family:'Nunito',sans-serif}
 .lprev{font-size:9px;font-weight:900;padding:2px 6px;border-radius:7px;background:#fff3e0;color:var(--orange);text-transform:uppercase}
 .lparc{font-size:9px;font-weight:900;padding:2px 6px;border-radius:7px;background:#f0e8ff;color:#7b3fa8;text-transform:uppercase}
 .lanc-val{font-size:15px;font-weight:900;flex-shrink:0;letter-spacing:-.3px}
-.lanc-val.e{color:var(--green)}.lanc-val.s{color:var(--danger)}
+.lanc-val.e{color:var(--green)}.lanc-val.s{color:var(--danger)}.lanc-val.transf{color:#1a6da8}
 .lanc-acoes{display:flex;gap:2px;flex-shrink:0}
 .editbtn,.delbtn{background:none;border:none;font-size:14px;padding:5px;border-radius:7px;color:#d0c8c0}
 .editbtn:active{background:#e8f5e9;color:var(--pj)}
@@ -217,7 +217,7 @@ input,select,textarea{font-family:'Nunito',sans-serif}
 .fgrp input:focus,.fgrp select:focus{border-color:var(--pj)}
 .tipo-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .tbtn{border:2px solid var(--border);border-radius:11px;padding:11px 4px;text-align:center;font-size:13px;font-weight:800;color:var(--muted);cursor:pointer;transition:.2s;background:#fff}
-.tbtn.te{background:#e8f5e9;border-color:var(--green);color:var(--green)}
+.tbtn.te{background:#e8f5e9;border-color:var(--green);color:var(--green)}.tbtn.tt{background:#e8f0fe;border-color:#1a6da8;color:#1a6da8}
 .tbtn.ts{background:#fdecea;border-color:var(--danger);color:var(--danger)}
 .parc-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
@@ -336,15 +336,16 @@ input,select,textarea{font-family:'Nunito',sans-serif}
     <input type="hidden" id="mEditId">
     <div class="fgrp">
       <label>Tipo</label>
-      <div class="tipo-toggle">
+      <div class="tipo-toggle" style="grid-template-columns:1fr 1fr 1fr">
         <div class="tbtn" id="btE" onclick="sTipo('e')">💵 Receita</div>
         <div class="tbtn" id="btS" onclick="sTipo('s')">💸 Despesa</div>
+        <div class="tbtn" id="btT" onclick="sTipo('t')">🔄 Transf.</div>
       </div>
     </div>
     <div class="fgrp"><label>Descrição</label><input type="text" id="iDesc" placeholder="Ex: Comissão, Aluguel..."></div>
     <div class="fgrp"><label>Valor (R$)</label><input type="number" id="iValor" placeholder="0,00" step="0.01" min="0" inputmode="decimal"></div>
     <div class="fgrp"><label>Data</label><input type="date" id="iData"></div>
-    <div class="fgrp">
+    <div class="fgrp" id="catGrp">
       <label>Categoria</label>
       <select id="iCat"></select>
       <div class="nova-cat-wrap">
@@ -352,7 +353,7 @@ input,select,textarea{font-family:'Nunito',sans-serif}
         <button onclick="adicionarNovaCat()">Adicionar</button>
       </div>
     </div>
-    <div class="fgrp">
+    <div class="fgrp" id="fpgtoGrp">
       <label>Forma de Pagamento</label>
       <select id="iFpgto">
         <option value="">Selecionar...</option>
@@ -363,7 +364,8 @@ input,select,textarea{font-family:'Nunito',sans-serif}
         <option value="Dinheiro">💵 Dinheiro</option>
       </select>
     </div>
-    <div class="fgrp"><label>Conta / Carteira</label><div class="chips" id="chipsBank"></div></div>
+    <div class="fgrp"><label id="contaOrigemLabel">Conta / Carteira</label><div class="chips" id="chipsBank"></div></div>
+    <div class="fgrp" id="contaDestinoGrp" style="display:none"><label>Conta Destino</label><div class="chips" id="chipsBankDest"></div></div>
     <div class="fgrp" id="parcGrp">
       <label>Parcelamento</label>
       <div class="parc-row">
@@ -636,10 +638,11 @@ function renderContent(){
 // ── LANÇAMENTO HTML ──────────────────────────────────────
 function rLanc(l){
   const ehFuturo=l.dt>hoje();
-  const ico=l.t==='e'?'💵':'💸';
-  const icoCls=l.t==='e'?'ico-e':(ehFuturo?'ico-prev':'ico-s');
-  const vCls=l.t==='e'?'e':'s';
-  const pfx=l.t==='e'?'+':'−';
+  const ehT=l.t==='t';
+  const ico=l.t==='e'?'💵':ehT?'🔄':'💸';
+  const icoCls=l.t==='e'?'ico-e':ehT?'ico-transf':(ehFuturo?'ico-prev':'ico-s');
+  const vCls=l.t==='e'?'e':ehT?'transf':'s';
+  const pfx=l.t==='e'?'+':ehT?'':'−';
   const catCls=l.p==='pj'?'cpj':'cpf';
   const fpgtoMap={'PIX':'💸','Débito':'💳','Cartão de Crédito':'💳','Boleto':'📄','Dinheiro':'💵'};
   return `<div class="lanc">
@@ -650,6 +653,7 @@ function rLanc(l){
         <span class="lcat ${catCls}">${l.c||l.cg||'Geral'}</span>
         <span class="ldata">${dataFmt(l.dt)}</span>
         ${l.b?`<span class="lbanco">${l.b}</span>`:''}
+        ${l.bdest?`<span class="lbanco">→ ${l.bdest}</span>`:''}
         ${l.fpgto?`<span class="lfpgto">${fpgtoMap[l.fpgto]||''} ${l.fpgto}</span>`:''}
         ${ehFuturo?'<span class="lprev">Previsto</span>':''}
         ${l.parc?`<span class="lparc">${l.parc}</span>`:''}
@@ -940,11 +944,25 @@ window.fecharModal=function(){document.getElementById('ov').classList.remove('op
 
 window.sTipo=function(t){
   mTipo=t;
-  ['E','S'].forEach(x=>{
+  ['E','S','T'].forEach(x=>{
     const el=document.getElementById('bt'+x);
+    if(!el) return;
     el.className='tbtn';
     if(x===t.toUpperCase()) el.classList.add('t'+t);
   });
+  // Mostra/oculta campos conforme tipo
+  const isTransf=t==='t';
+  const catGrp=document.getElementById('catGrp');
+  const fpGrp=document.getElementById('fpgtoGrp');
+  const parcGrp=document.getElementById('parcGrp');
+  const destGrp=document.getElementById('contaDestinoGrp');
+  const origemLabel=document.getElementById('contaOrigemLabel');
+  if(catGrp) catGrp.style.display=isTransf?'none':'block';
+  if(fpGrp) fpGrp.style.display=isTransf?'none':'block';
+  if(parcGrp) parcGrp.style.display=isTransf?'none':'block';
+  if(destGrp) destGrp.style.display=isTransf?'block':'none';
+  if(origemLabel) origemLabel.textContent=isTransf?'Conta Origem':'Conta / Carteira';
+  if(isTransf) renderChipsDest();
 }
 
 function renderCats(selVal=''){
@@ -984,6 +1002,20 @@ function renderChips(selBanco=''){
   w.appendChild(add);
 }
 
+function renderChipsDest(selBanco=''){
+  const w=document.getElementById('chipsBankDest');
+  if(!w) return;
+  w.innerHTML='';
+  const todos=[...new Set([...BANCOS_DEF,...bancosExtra])];
+  todos.forEach(b=>{
+    const d=document.createElement('div');
+    d.className='chip'+(b===selBanco?' s'+(mPerfil==='pj'?'pj':'pf'):'');
+    d.textContent=b;
+    d.onclick=()=>{w.querySelectorAll('.chip:not(.add-chip)').forEach(x=>{x.className='chip'});d.classList.add('s'+(mPerfil==='pj'?'pj':'pf'))};
+    w.appendChild(d);
+  });
+}
+
 window.adicionarNovaCat=async function(){
   const novaCat=document.getElementById('iNovaCat').value.trim();
   if(!novaCat) return;
@@ -1004,14 +1036,16 @@ window.salvarLanc=async function(){
   const data=document.getElementById('iData').value;
   const catEl=document.getElementById('iCat');
   const catOp=catEl.options[catEl.selectedIndex];
-  const banco=document.querySelector('.chip.spj,.chip.spf');
+  const banco=document.querySelector('#chipsBank .chip.spj,#chipsBank .chip.spf');
+  const bancoDest=document.querySelector('#chipsBankDest .chip.spj,#chipsBankDest .chip.spf');
   const fpgto=document.getElementById('iFpgto').value;
-  const parcelas=parseInt(document.getElementById('iParcelas').value)||1;
-  const intervalo=document.getElementById('iIntervalo').value;
+  const parcelas=mTipo==='t'?1:(parseInt(document.getElementById('iParcelas').value)||1);
+  const intervalo=document.getElementById('iIntervalo')?.value||'mensal';
 
   if(!desc){alert('Informe a descrição');return}
   if(!valor||valor<=0){alert('Informe o valor');return}
   if(!data){alert('Informe a data');return}
+  if(mTipo==='t'&&!bancoDest){alert('Selecione a conta destino');return}
 
   document.getElementById('bSave').textContent='Salvando...';
 
@@ -1025,7 +1059,8 @@ window.salvarLanc=async function(){
         c:catOp?catOp.value:'Geral',
         cg:catOp?catOp.parentElement.label:'Geral',
         b:banco?banco.textContent:'',
-        fpgto:fpgto||''
+        bdest:mTipo==='t'&&bancoDest?bancoDest.textContent:'',
+        fpgto:mTipo==='t'?'Transferência':(fpgto||'')
       });
       const idx=dados.findIndex(x=>x.id===mEditId);
       if(idx>=0){
@@ -1049,7 +1084,8 @@ window.salvarLanc=async function(){
           c:catOp?catOp.value:'Geral',
           cg:catOp?catOp.parentElement.label:'Geral',
           b:banco?banco.textContent:'',
-          fpgto:fpgto||'',
+          bdest:mTipo==='t'&&bancoDest?bancoDest.textContent:'',
+          fpgto:mTipo==='t'?'Transferência':(fpgto||''),
           parc:parcelas>1?`${i+1}/${parcelas}`:''
         };
         const ref=await addDoc(collection(db,'lancamentos'),lanc);
