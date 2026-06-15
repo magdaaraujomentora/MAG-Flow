@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#071529">
+<meta name="theme-color" content="#0f2d1e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,7 +13,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --pj:#112250;--pj2:#1a3a7a;--pjl:#e8eef8;--pjm:#b5c5e8;
+  --pj:#1a5c3e;--pj2:#2a7a52;--pjl:#eaf5ef;--pjm:#b5d9c8;
   --pf:#7b3f6e;--pf2:#9c5490;--pfl:#f6eef4;--pfm:#d9b8d3;
   --bg:#f4f1ec;--card:#fff;--text:#1a1a1a;--muted:#8a8a8a;
   --border:#e5dfd7;--danger:#c0392b;--green:#2e7d32;
@@ -29,7 +29,7 @@ input,select,textarea{font-family:'Nunito',sans-serif}
 #authScreen{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   min-height:100vh;padding:32px 24px;
-  background:linear-gradient(160deg,#071529 0%,#112250 50%,#1a3a7a 100%);
+  background:linear-gradient(160deg,#0c2e1e 0%,#1a5c3e 50%,#2a7a52 100%);
 }
 .auth-logo{
   font-size:32px;font-weight:900;color:#fff;letter-spacing:-1px;
@@ -59,7 +59,7 @@ input,select,textarea{font-family:'Nunito',sans-serif}
 
 /* HEADER */
 .hdr{position:sticky;top:0;z-index:100}
-.hdr-bg{background:linear-gradient(135deg,#071529 0%,#112250 55%,#1a3a7a 100%);padding:16px 16px 14px;transition:background 0.35s}
+.hdr-bg{background:linear-gradient(135deg,#0c2e1e 0%,#1a5c3e 55%,#2a7a52 100%);padding:16px 16px 14px;transition:background 0.35s}
 .hdr-bg.pf{background:linear-gradient(135deg,#350f2c 0%,#7b3f6e 55%,#9c5490 100%)}
 .hdr-bg.gr{background:linear-gradient(135deg,#0d3057 0%,#1a6da8 55%,#2980b9 100%)}
 .hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
@@ -435,10 +435,10 @@ const PCOR={
   '4. Educação Continuada 5%':{bar:'#1565c0',badge:'#e3f2fd',text:'#1565c0'},
   '5. Investir 10%':{bar:'#7b3f6e',badge:'#f6eef4',text:'#7b3f6e'},
   '6. Lazer 10%':{bar:'#e67e22',badge:'#fff3e0',text:'#9a6700'},
-  '7. Reserva Emergência 5%':{bar:'#112250',badge:'#e8eef8',text:'#112250'}
+  '7. Reserva Emergência 5%':{bar:'#1a5c3e',badge:'#eaf5ef',text:'#1a5c3e'}
 };
 const BANCOS_DEF=['Nubank','Bradesco','Caixa','BB','Carteira','Outro'];
-const PIZZACORES=['#112250','#c0392b','#1565c0','#7b3f6e','#e67e22','#e74c3c','#2980b9','#8e44ad','#16a085'];
+const PIZZACORES=['#1a5c3e','#c0392b','#1565c0','#7b3f6e','#e67e22','#e74c3c','#2980b9','#8e44ad','#16a085'];
 
 // ── ESTADO ──────────────────────────────────────────────
 let uid=null, dados=[], bancosExtra=[], catsExtra={pj:{},pf:{}};
@@ -543,6 +543,7 @@ window.sair=async function(){
 }
 
 onAuthStateChanged(auth,async user=>{
+  console.log('🔐 Auth state:', user ? 'logado uid='+user.uid : 'deslogado');
   if(user){
     uid=user.uid;
     document.getElementById('authScreen').style.display='none';
@@ -561,17 +562,33 @@ onAuthStateChanged(auth,async user=>{
 async function carregarDados(){
   document.getElementById('main').innerHTML='<div class="loading"><div class="spin">⏳</div><p>Carregando seus dados...</p></div>';
   try{
+    // Busca lançamentos sem orderBy para evitar erro de índice
     const q=query(collection(db,'lancamentos'),where('uid','==',uid));
     const snap=await getDocs(q);
     dados=snap.docs.map(d=>({...d.data(),id:d.id}));
-    // Carregar cats extras e bancos
-    const cfgSnap=await getDocs(query(collection(db,'configs'),where('uid','==',uid)));
-    if(!cfgSnap.empty){
-      const cfg=cfgSnap.docs[0].data();
-      bancosExtra=cfg.bancos||[];
-      catsExtra=cfg.cats||{pj:{},pf:{}};
-    }
-  } catch(e){console.error(e)}
+    console.log('✅ Lançamentos carregados:',dados.length);
+
+    // Carregar bancos da coleção bancos
+    try{
+      const bSnap=await getDocs(query(collection(db,'bancos'),where('uid','==',uid)));
+      bancosExtra=bSnap.docs.map(d=>d.data().nome).filter(Boolean);
+    } catch(e){ bancosExtra=[]; }
+
+    // Carregar configs (cats extras e bancos alternativos)
+    try{
+      const cfgSnap=await getDocs(query(collection(db,'configs'),where('uid','==',uid)));
+      if(!cfgSnap.empty){
+        const cfg=cfgSnap.docs[0].data();
+        if(cfg.bancos) bancosExtra=[...new Set([...bancosExtra,...cfg.bancos])];
+        catsExtra=cfg.cats||{pj:{},pf:{}};
+      }
+    } catch(e){ catsExtra={pj:{},pf:{}}; }
+
+    bancos=[...new Set([...BANCOS_DEF,...bancosExtra])];
+  } catch(e){
+    console.error('❌ Erro ao carregar dados:',e);
+    document.getElementById('main').innerHTML=`<div class="empty"><div class="ei">⚠️</div><p>Erro ao carregar dados</p><small>${e.message}</small><br><button onclick="carregarDados().then(renderContent)" style="margin-top:12px;padding:10px 20px;border:none;border-radius:10px;background:var(--pj);color:#fff;font-weight:800;cursor:pointer">Tentar novamente</button></div>`;
+  }
 }
 
 async function salvarCfg(){
