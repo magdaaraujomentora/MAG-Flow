@@ -970,6 +970,20 @@ window.exportarExcel=function(){
 }
 
 // ── MODAL ────────────────────────────────────────────────
+window.setRecorr=function(r){
+  mRecorr=r;
+  ['Unico','Parc','Recorr'].forEach(x=>{
+    const el=document.getElementById('rt'+x);
+    if(!el) return;
+    const val=x==='Unico'?'unico':x==='Parc'?'parcelado':'recorrente';
+    el.className='rtbtn'+(r===val?' active':'');
+  });
+  const pb=document.getElementById('parcBox');
+  const rb=document.getElementById('recorrBox');
+  if(pb) pb.style.display=r==='parcelado'?'block':'none';
+  if(rb) rb.style.display=r==='recorrente'?'block':'none';
+}
+
 window.abrirModal=function(){
   mPerfil=aba==='pf'?'pf':'pj';
   mTipo='e'; mEditId=null;
@@ -980,7 +994,7 @@ window.abrirModal=function(){
   document.getElementById('iData').value=hoje();
   document.getElementById('iFpgto').value='';
   mRecorr='unico';
-  setRecorr('unico');
+  window.setRecorr('unico');
   document.getElementById('bSave').className='btn-save s'+(mPerfil==='pf'?'pf':'pj');
   document.getElementById('parcGrp').style.display='block';
   sTipo('e');
@@ -1010,15 +1024,7 @@ window.abrirEditar=function(id){
 
 window.fecharModal=function(){document.getElementById('ov').classList.remove('open')}
 
-window.setRecorr=function(r){
-  mRecorr=r;
-  ['Unico','Parc','Recorr'].forEach(x=>{
-    const el=document.getElementById('rt'+x);
-    if(el) el.className='rtbtn'+(r===(x==='Unico'?'unico':x==='Parc'?'parcelado':'recorrente')?' active':'');
-  });
-  document.getElementById('parcBox').style.display=r==='parcelado'?'block':'none';
-  document.getElementById('recorrBox').style.display=r==='recorrente'?'block':'none';
-}
+// setRecorr definido acima
 
 window.sTipo=function(t){
   mTipo=t;
